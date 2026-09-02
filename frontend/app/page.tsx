@@ -34,6 +34,9 @@ import {
   Legend,
 } from "recharts";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 type DashboardKpis = {
   totalBookings: number;
   todayBookings: number;
@@ -124,10 +127,10 @@ export default function DashboardPage() {
           bookingsResponse,
         ] = await Promise.all([
           fetch(
-            `http://localhost:5000/api/dashboard?range=${range}`
+            `${API_URL}/api/dashboard?range=${range}`
           ),
           fetch(
-            "http://localhost:5000/api/bookings"
+            `${API_URL}/api/bookings`
           ),
         ]);
 

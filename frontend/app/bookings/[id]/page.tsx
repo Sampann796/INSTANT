@@ -16,6 +16,9 @@ import {
 } from "lucide-react";
 import socket from "../../../lib/socket";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 type Booking = {
   _id: string;
 
@@ -139,7 +142,7 @@ export default function BookingDetailsPage() {
         setError("");
 
         const response = await fetch(
-          `http://localhost:5000/api/bookings/${id}`
+          `${API_URL}/api/bookings/${id}`
         );
 
         if (!response.ok) {
@@ -241,7 +244,7 @@ export default function BookingDetailsPage() {
       setError("");
 
       const response = await fetch(
-        `http://localhost:5000/api/bookings/${booking._id}/status`,
+        `${API_URL}/api/bookings/${booking._id}/status`,
         {
           method: "PATCH",
           headers: {
