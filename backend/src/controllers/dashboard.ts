@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Booking } from "../models/Booking";
 import { Customer } from "../models/Customer";
 import { Mechanic } from "../models/Mechanic";
+import { Vehicle } from "../models/Vehicle";
 
 export const getDashboard = async (
   req: Request,
@@ -24,14 +25,27 @@ export const getDashboard = async (
         rangeDays * 24 * 60 * 60 * 1000
     );
 
+    // Start of today
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    // Start of tomorrow
+    const startOfTomorrow = new Date(startOfToday);
+    startOfTomorrow.setDate(
+      startOfTomorrow.getDate() + 1
+    );
+
     // Run independent queries in parallel
     const [
       totalBookings,
+      todayBookings,
       completedBookings,
       pendingBookings,
       activeBookings,
       cancelledBookings,
       totalCustomers,
+      newCustomers,
+      totalVehicles,
       availableMechanics,
       totalMechanics,
       revenueResult,
@@ -41,6 +55,14 @@ export const getDashboard = async (
     ] = await Promise.all([
       Booking.countDocuments({
         createdAt: { $gte: startDate },
+      }),
+
+      // Today's bookings
+      Booking.countDocuments({
+        createdAt: {
+          $gte: startOfToday,
+          $lt: startOfTomorrow,
+        },
       }),
 
       Booking.countDocuments({
@@ -72,6 +94,14 @@ export const getDashboard = async (
       Customer.countDocuments({
         status: "active",
       }),
+
+      // Customers created during the selected range
+      Customer.countDocuments({
+        status: "active",
+        createdAt: { $gte: startDate },
+      }),
+
+      Vehicle.countDocuments(),
 
       Mechanic.countDocuments({
         status: "available",
@@ -211,7 +241,8 @@ export const getDashboard = async (
       ]),
     ]);
 
-    const revenue = revenueResult[0]?.total || 0;
+    const revenue =
+      revenueResult[0]?.total || 0;
 
     const averageBookingValue =
       revenueResult[0]?.average || 0;
@@ -235,11 +266,14 @@ export const getDashboard = async (
 
         kpis: {
           totalBookings,
+          todayBookings,
           completedBookings,
           pendingBookings,
           activeBookings,
           cancelledBookings,
           totalCustomers,
+          newCustomers,
+          totalVehicles,
           availableMechanics,
           totalMechanics,
           revenue,

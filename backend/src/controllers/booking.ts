@@ -98,12 +98,10 @@ export const getBookings = async (
 
     const filter: any = {};
 
-    // Status filter
     if (status && status !== "all") {
       filter.status = status;
     }
 
-    // Date filter
     if (from || to) {
       filter.scheduledAt = {};
 
@@ -129,7 +127,6 @@ export const getBookings = async (
       }
     }
 
-    // Search booking number
     if (search) {
       filter.bookingNumber = {
         $regex: String(search),
@@ -195,6 +192,98 @@ export const getBookings = async (
     res.status(500).json({
       success: false,
       message: "Failed to load bookings",
+    });
+  }
+};
+
+/**
+ * Update booking status
+ * Also creates a status-history record
+ * and broadcasts the update through Socket.IO.
+ */
+export const updateBookingStatus = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { status, note, changedBy } = req.body;
+
+    const allowedStatuses = [
+      "pending",
+      "assigned",
+      "on_the_way",
+      "in_progress",
+      "completed",
+      "cancelled",
+    ];
+
+    if (
+      !status ||
+      !allowedStatuses.includes(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking status",
+      });
+    }
+
+    const booking =
+      await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    const previousStatus = booking.status;
+
+    booking.status = status;
+
+    await booking.save();
+
+    const history =
+      await BookingStatusHistory.create({
+        bookingId: booking._id,
+        previousStatus,
+        newStatus: status,
+        changedBy,
+        note:
+          note ||
+          `Status changed from ${previousStatus} to ${status}`,
+      });
+
+    // Send real-time update through Socket.IO
+    const io = req.app.get("io");
+
+    if (io) {
+      io.emit("booking:updated", {
+        bookingId: booking._id.toString(),
+        previousStatus,
+        newStatus: status,
+        history,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking status updated successfully",
+      data: {
+        booking,
+        history,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Update booking status error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update booking status",
     });
   }
 };
