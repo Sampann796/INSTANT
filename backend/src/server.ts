@@ -3,6 +3,7 @@ import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
+import { env } from "./config/env";
 
 import {connectDB} from "./config/db";
 
@@ -19,7 +20,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: env.CLIENT_URL,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   },
 });
@@ -28,7 +29,8 @@ app.set("io", io);
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: env.CLIENT_URL,
+    credentials: true,
   })
 );
 
